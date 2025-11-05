@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:knighthoot/screens/login_screen.dart';
 import 'package:knighthoot/screens/welcome_screen.dart';
+import 'package:knighthoot/screens/email_verification_screen.dart';
 import '../services/api_service.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -40,6 +41,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // First check if email already exists
+      final emailExists = await ApiService.checkEmailExists(_emailController.text.trim());
+      
+      if (emailExists) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Email already registered. Please use a different email.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // Register the user
       await ApiService.register(
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
@@ -51,14 +68,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Registration successful! Please login.'),
-          backgroundColor: Colors.green,
+      // Navigate to email verification screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EmailVerificationScreen(
+            email: _emailController.text.trim(),
+            firstName: _firstNameController.text.trim(),
+            lastName: _lastNameController.text.trim(),
+            username: _usernameController.text.trim(),
+          ),
         ),
       );
-
-      Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -67,8 +88,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           backgroundColor: Colors.red,
         ),
       );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
     }
   }
 

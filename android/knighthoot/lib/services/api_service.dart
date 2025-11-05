@@ -84,4 +84,47 @@ class ApiService {
       throw Exception('Connection error: $e');
     }
   }
+
+  static Future<bool> checkEmailExists(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/emailExists'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return true; // Email exists
+      } else if (response.statusCode == 400) {
+        return false; // Email doesn't exist
+      } else {
+        throw Exception('Failed to check email');
+      }
+    } catch (e) {
+      throw Exception('Connection error: $e');
+    }
+  }
+
+  static Future<Map<String, dynamic>> sendOtpEmail(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/email'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to send verification email');
+      }
+    } catch (e) {
+      throw Exception('Connection error: $e');
+    }
+  }
 }
