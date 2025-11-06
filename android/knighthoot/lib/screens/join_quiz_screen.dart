@@ -5,6 +5,7 @@ import '../services/quiz_services.dart';
 import '../services/quiz_session.dart';
 import 'waiting_room_screen.dart';
 import 'quiz_question_screen.dart';
+import 'welcome_screen.dart'; // ADD THIS IMPORT
 
 class JoinQuizScreen extends StatefulWidget {
   final User user;
@@ -27,74 +28,122 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
   }
 
   Future<void> _handleJoinQuiz() async {
-  if (_pinController.text.trim().isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Please enter a test pin'),
-        backgroundColor: Colors.red,
-      ),
-    );
-    return;
-  }
-
-  setState(() => _isLoading = true);
-
-  try {
-    final session = await QuizService.joinQuiz(
-      _pinController.text.trim(),
-      widget.user.id,
-      widget.user.token ?? '',  // PASS TOKEN HERE
-    );
-
-    if (!mounted) return;
-
-    // Check if quiz is live
-    if (!session.isLive) {
+    if (_pinController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('This quiz has not started yet. Please wait for the teacher to begin.'),
-          backgroundColor: Colors.orange,
-          duration: Duration(seconds: 3),
-        ),
-      );
-      setState(() => _isLoading = false);
-      return;
-    }
-
-    // Check if quiz has already ended
-    if (session.currentQuestion == -1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('This quiz has already ended.'),
+          content: Text('Please enter a test pin'),
           backgroundColor: Colors.red,
         ),
       );
-      setState(() => _isLoading = false);
       return;
     }
 
-    // Navigate directly to the current question
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => QuizQuestionScreen(
-          user: widget.user,
-          session: session,
+    setState(() => _isLoading = true);
+
+    try {
+      final session = await QuizService.joinQuiz(
+        _pinController.text.trim(),
+        widget.user.id,
+        widget.user.token ?? '',
+      );
+
+      if (!mounted) return;
+
+      // Check if quiz is live
+      if (!session.isLive) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This quiz has not started yet. Please wait for the teacher to begin.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // Check if quiz has already ended
+      if (session.currentQuestion == -1) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This quiz has already ended.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // Navigate directly to the current question
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => QuizQuestionScreen(
+            user: widget.user,
+            session: session,
+          ),
         ),
-      ),
-    );
-  } catch (e) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(e.toString().replaceAll('Exception: ', '')),
-        backgroundColor: Colors.red,
-      ),
-    );
-  } finally {
-    if (mounted) setState(() => _isLoading = false);
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
-}
+
+  void _handleLogout() {
+    // Show confirmation dialog
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF272727),
+          title: const Text(
+            'Logout',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: const Text(
+            'Are you sure you want to logout?',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                // Close dialog
+                Navigator.pop(context);
+                
+                // Navigate to welcome screen and clear all previous routes
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WelcomeScreen(),
+                  ),
+                  (route) => false,
+                );
+              },
+              child: const Text(
+                'Logout',
+                style: TextStyle(color: Color(0xFFFFC904)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void _onTabTapped(int index) {
     setState(() {
@@ -133,9 +182,7 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Color(0xFFFFC904)),
-            onPressed: () {
-              Navigator.popUntil(context, (route) => route.isFirst);
-            },
+            onPressed: _handleLogout, // CHANGED THIS
           ),
         ],
       ),
@@ -227,6 +274,18 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
+
+                      // User Info
+                      Text(
+                        '${widget.user.firstName} ${widget.user.lastName}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFFFFC904),
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
 
                       // Instruction Text
                       const Text(

@@ -9,6 +9,7 @@ class EmailVerificationScreen extends StatefulWidget {
   final String firstName;
   final String lastName;
   final String username;
+  final String password; // ADD THIS - we need it to login after verification
 
   const EmailVerificationScreen({
     Key? key,
@@ -16,6 +17,7 @@ class EmailVerificationScreen extends StatefulWidget {
     required this.firstName,
     required this.lastName,
     required this.username,
+    required this.password, // ADD THIS
   }) : super(key: key);
 
   @override
@@ -114,30 +116,37 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Email verified successfully!'),
+            content: Text('Email verified successfully! Logging you in...'),
             backgroundColor: Colors.green,
           ),
         );
 
-        // Create user object and navigate to join quiz screen
-        final user = User(
-          id: '',
-          mongoId: '',
-          firstName: widget.firstName,
-          lastName: widget.lastName,
-          username: widget.username,
-          email: widget.email,
-          role: 'student',
-        );
+        // Now log the user in to get complete user data with token
+        try {
+          final user = await ApiService.login(
+            widget.username,
+            widget.password,
+          );
 
-        // Navigate to join quiz screen
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(
-            builder: (context) => JoinQuizScreen(user: user),
-          ),
-          (route) => false,
-        );
+          if (!mounted) return;
+
+          // Navigate to join quiz screen with properly authenticated user
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => JoinQuizScreen(user: user),
+            ),
+            (route) => false,
+          );
+        } catch (e) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Verification successful but login failed: ${e.toString().replaceAll('Exception: ', '')}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
