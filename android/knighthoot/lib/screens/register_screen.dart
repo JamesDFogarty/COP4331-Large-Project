@@ -68,7 +68,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (!mounted) return;
 
-      // Navigate to email verification screen
+      // Navigate to email verification screen with password
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -77,6 +77,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             firstName: _firstNameController.text.trim(),
             lastName: _lastNameController.text.trim(),
             username: _usernameController.text.trim(),
+            password: _passwordController.text,
           ),
         ),
       );
