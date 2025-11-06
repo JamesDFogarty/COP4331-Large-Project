@@ -3,16 +3,20 @@ import 'package:http/http.dart' as http;
 import '../services/quiz_session.dart';
 
 class QuizService {
-  static const String baseUrl = 'http://localhost:5173/api';
+  static const String baseUrl = 'http://174.138.73.101:5173/api';
 
-  static Future<QuizSession> joinQuiz(String pin, String studentId) async {
+  /// Join a quiz using PIN (requires auth token)
+  static Future<QuizSession> joinQuiz(String pin, String studentId, String token) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/quiz/join'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$baseUrl/joinTest'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',  // ADD AUTH HEADER
+        },
         body: jsonEncode({
           'PIN': pin,
-          'SID': studentId,
+          'ID': studentId,
         }),
       );
 
@@ -28,10 +32,14 @@ class QuizService {
     }
   }
 
-  static Future<QuizSession> getQuizStatus(String testID) async {
+  /// Get current quiz status (requires auth token)
+  static Future<QuizSession> getQuizStatus(String testID, String token) async {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/test/$testID'),
+        headers: {
+          'Authorization': 'Bearer $token',  // ADD AUTH HEADER
+        },
       );
 
       if (response.statusCode == 200) {
@@ -45,19 +53,24 @@ class QuizService {
     }
   }
 
+  /// Submit student's answer (requires auth token)
   static Future<bool> submitAnswer({
     required String testID,
     required String studentId,
     required int questionIndex,
     required String answer,
+    required String token,  // ADD THIS
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/quiz/answer'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$baseUrl/submitQuestion'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',  // ADD AUTH HEADER
+        },
         body: jsonEncode({
+          'ID': studentId,
           'testID': testID,
-          'SID': studentId,
           'questionIndex': questionIndex,
           'selectedAnswer': answer,
         }),
@@ -70,29 +83,35 @@ class QuizService {
     }
   }
 
-  static Future<Map<String, dynamic>> checkAnswer({
+  /// Wait for teacher to advance (requires auth token)
+  static Future<Map<String, dynamic>> waitForNextQuestion({
     required String testID,
-    required String studentId,
-    required int questionIndex,
+    required String token,  // ADD THIS
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/quiz/checkAnswer'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$baseUrl/waitQuestion'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',  // ADD AUTH HEADER
+        },
         body: jsonEncode({
           'testID': testID,
-          'SID': studentId,
-          'questionIndex': questionIndex,
         }),
       );
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final data = jsonDecode(response.body);
+        return {
+          'correctAnswer': data['answer'],
+          'error': false,
+        };
       } else {
-        return {'correct': false, 'error': true};
+        return {'error': true};
       }
     } catch (e) {
-      return {'correct': false, 'error': true};
+      print('Error waiting for question: $e');
+      return {'error': true};
     }
   }
 }

@@ -4,6 +4,7 @@ import '../models/user.dart';
 import '../services/quiz_services.dart';
 import '../services/quiz_session.dart';
 import 'waiting_room_screen.dart';
+import 'quiz_question_screen.dart';
 
 class JoinQuizScreen extends StatefulWidget {
   final User user;
@@ -26,47 +27,74 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
   }
 
   Future<void> _handleJoinQuiz() async {
-    if (_pinController.text.trim().isEmpty) {
+  if (_pinController.text.trim().isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please enter a test pin'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
+  }
+
+  setState(() => _isLoading = true);
+
+  try {
+    final session = await QuizService.joinQuiz(
+      _pinController.text.trim(),
+      widget.user.id,
+      widget.user.token ?? '',  // PASS TOKEN HERE
+    );
+
+    if (!mounted) return;
+
+    // Check if quiz is live
+    if (!session.isLive) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please enter a test pin'),
-          backgroundColor: Colors.red,
+          content: Text('This quiz has not started yet. Please wait for the teacher to begin.'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
         ),
       );
+      setState(() => _isLoading = false);
       return;
     }
 
-    setState(() => _isLoading = true);
-
-    try {
-      final session = await QuizService.joinQuiz(
-        _pinController.text.trim(),
-        widget.user.id,
-      );
-
-      if (!mounted) return;
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => WaitingRoomScreen(
-            user: widget.user,
-            session: session,
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
+    // Check if quiz has already ended
+    if (session.currentQuestion == -1) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
+        const SnackBar(
+          content: Text('This quiz has already ended.'),
           backgroundColor: Colors.red,
         ),
       );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      setState(() => _isLoading = false);
+      return;
     }
+
+    // Navigate directly to the current question
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => QuizQuestionScreen(
+          user: widget.user,
+          session: session,
+        ),
+      ),
+    );
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(e.toString().replaceAll('Exception: ', '')),
+        backgroundColor: Colors.red,
+      ),
+    );
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
   }
+}
 
   void _onTabTapped(int index) {
     setState(() {

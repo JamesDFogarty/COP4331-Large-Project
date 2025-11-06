@@ -42,7 +42,10 @@ class _WaitingRoomScreenState extends State<WaitingRoomScreen> {
       setState(() => _isChecking = true);
 
       try {
-        final updatedSession = await QuizService.getQuizStatus(widget.session.testID);
+        final updatedSession = await QuizService.getQuizStatus(
+          widget.session.testID,
+          widget.user.token ?? '',  // Added token
+        );
         
         if (updatedSession.isLive && updatedSession.currentQuestion >= 0) {
           _pollTimer?.cancel();

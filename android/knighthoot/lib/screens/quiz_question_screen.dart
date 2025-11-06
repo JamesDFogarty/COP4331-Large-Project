@@ -21,10 +21,10 @@ class QuizQuestionScreen extends StatefulWidget {
 }
 
 class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
-  Timer? _pollTimer;
   String? _selectedAnswer;
   int _currentQuestionIndex = 0;
   bool _isSubmitting = false;
+  bool _isWaitingForTeacher = false;  // ADD THIS LINE - was missing!
   int _correctAnswers = 0;
   int _totalAnswered = 0;
 
@@ -32,68 +32,124 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
   void initState() {
     super.initState();
     _currentQuestionIndex = widget.session.currentQuestion;
-    _startPolling();
   }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
     super.dispose();
   }
 
-  void _startPolling() {
-    _pollTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
-      try {
-        final updatedSession = await QuizService.getQuizStatus(widget.session.testID);
+  Future<void> _selectAnswer(String answer) async {
+    if (_isSubmitting || _isWaitingForTeacher) return;
 
-        if (updatedSession.currentQuestion > _currentQuestionIndex) {
-          _pollTimer?.cancel();
-          await _handleQuestionAdvance(updatedSession);
-        }
-
-        if (!updatedSession.isLive && updatedSession.currentQuestion == -1) {
-          _pollTimer?.cancel();
-          _navigateToResults();
-        }
-      } catch (e) {
-        print('Error polling: $e');
-      }
+    setState(() {
+      _selectedAnswer = answer;
+      _isSubmitting = true;
     });
-  }
 
-  Future<void> _handleQuestionAdvance(QuizSession updatedSession) async {
-    final result = await QuizService.checkAnswer(
+    // Submit answer to backend with token
+    final success = await QuizService.submitAnswer(
       testID: widget.session.testID,
       studentId: widget.user.id,
       questionIndex: _currentQuestionIndex,
+      answer: answer,
+      token: widget.user.token ?? '',
     );
 
-    if (result['error'] != true) {
-      if (result['correct'] == true) {
-        _correctAnswers++;
+    if (!success) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to submit answer. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() {
+          _isSubmitting = false;
+          _selectedAnswer = null;
+        });
       }
-      _totalAnswered++;
+      return;
     }
 
-    if (!mounted) return;
-
-    final shouldContinue = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AnswerFeedbackScreen(
-          isCorrect: result['correct'] == true,
-          correctAnswer: result['correctAnswer'] ?? '',
-          studentAnswer: _selectedAnswer ?? 'No answer',
-        ),
-      ),
-    );
-
-    if (shouldContinue == true && mounted) {
+    // Answer submitted successfully, now wait for teacher
+    if (mounted) {
       setState(() {
-        _currentQuestionIndex = updatedSession.currentQuestion;
-        _selectedAnswer = null;
+        _isSubmitting = false;
+        _isWaitingForTeacher = true;
       });
-      _startPolling();
+
+      _waitForTeacherToAdvance();
+    }
+  }
+
+  Future<void> _waitForTeacherToAdvance() async {
+    try {
+      // This call blocks on the server until teacher advances
+      final result = await QuizService.waitForNextQuestion(
+        testID: widget.session.testID,
+        token: widget.user.token ?? '',
+      );
+
+      if (!mounted) return;
+
+      if (result['error'] != true) {
+        final correctAnswer = result['correctAnswer'] ?? '';
+        final isCorrect = _selectedAnswer == correctAnswer;
+
+        if (isCorrect) {
+          _correctAnswers++;
+        }
+        _totalAnswered++;
+
+        // Show feedback screen
+        final shouldContinue = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AnswerFeedbackScreen(
+              isCorrect: isCorrect,
+              correctAnswer: correctAnswer,
+              studentAnswer: _selectedAnswer ?? 'No answer',
+            ),
+          ),
+        );
+
+        if (shouldContinue == true && mounted) {
+          // Check if quiz has ended
+          final updatedSession = await QuizService.getQuizStatus(
+            widget.session.testID,
+            widget.user.token ?? '',
+          );
+          
+          if (!updatedSession.isLive && updatedSession.currentQuestion == -1) {
+            // Quiz ended
+            _navigateToResults();
+          } else if (updatedSession.currentQuestion > _currentQuestionIndex) {
+            // Move to next question
+            setState(() {
+              _currentQuestionIndex = updatedSession.currentQuestion;
+              _selectedAnswer = null;
+              _isWaitingForTeacher = false;
+            });
+          }
+        }
+      } else {
+        // Error occurred
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Connection error. Please check your internet.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          setState(() => _isWaitingForTeacher = false);
+        }
+      }
+    } catch (e) {
+      print('Error waiting for teacher: $e');
+      if (mounted) {
+        setState(() => _isWaitingForTeacher = false);
+      }
     }
   }
 
@@ -109,24 +165,6 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _selectAnswer(String answer) async {
-    setState(() {
-      _selectedAnswer = answer;
-      _isSubmitting = true;
-    });
-
-    await QuizService.submitAnswer(
-      testID: widget.session.testID,
-      studentId: widget.user.id,
-      questionIndex: _currentQuestionIndex,
-      answer: answer,
-    );
-
-    if (mounted) {
-      setState(() => _isSubmitting = false);
-    }
   }
 
   @override
@@ -188,11 +226,12 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
                     final choice = choices[index];
                     final answerText = question.choices[index];
                     final isSelected = _selectedAnswer == choice;
+                    final isDisabled = _isSubmitting || _isWaitingForTeacher;
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: InkWell(
-                        onTap: _isSubmitting ? null : () => _selectAnswer(choice),
+                        onTap: isDisabled ? null : () => _selectAnswer(choice),
                         child: Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
@@ -261,16 +300,34 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
                   color: const Color(0xFF1A1A1A),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
-                  _selectedAnswer == null
-                      ? 'Select your answer'
-                      : 'Answer selected! Waiting for teacher...',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: _selectedAnswer == null ? Colors.white70 : const Color(0xFFFFD700),
-                    fontWeight: _selectedAnswer == null ? FontWeight.normal : FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_isWaitingForTeacher) ...[
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Color(0xFFFFD700),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    Text(
+                      _selectedAnswer == null
+                          ? 'Select your answer'
+                          : _isWaitingForTeacher
+                              ? 'Waiting for teacher to advance...'
+                              : 'Answer selected!',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: _selectedAnswer == null ? Colors.white70 : const Color(0xFFFFD700),
+                        fontWeight: _selectedAnswer == null ? FontWeight.normal : FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
             ],
