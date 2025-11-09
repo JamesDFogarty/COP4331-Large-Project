@@ -453,7 +453,7 @@ class _GradesScreenState extends State<GradesScreen> {
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
-    return '${date.day}/${date.month}/${date.year}';
+    return '${date.month}/${date.day}/${date.year}';
   }
 
   Widget _buildHollowSquare(double size, double borderWidth) {

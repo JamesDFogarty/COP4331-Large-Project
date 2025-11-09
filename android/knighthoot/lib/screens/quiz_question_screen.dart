@@ -259,11 +259,11 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
   Color _getChoiceColor(String choice) {
     switch (choice) {
       case 'A':
-        return const Color(0xFFFFC904); // Yellow
+        return const Color(0xFFCC9D00); // Darker Yellow
       case 'B':
         return const Color(0xFF9E9E9E); // Gray
       case 'C':
-        return const Color(0xFFAC8C10); // Gold/Brown
+        return const Color(0xFF8B7010); // Darker Gold/Brown
       case 'D':
         return const Color(0xFF616161); // Dark Gray
       default:
@@ -386,71 +386,83 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
                   ),
                 ),
 
-                // Answer choices grid
+// Answer choices grid
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: GridView.count(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      children: List.generate(
-                        _currentQuestion.choices.length > 4 ? 4 : _currentQuestion.choices.length,
-                        (index) {
-                          final choice = choices[index];
-                          final answerText = _currentQuestion.choices[index];
-                          final isSelected = _selectedAnswer == choice;
-                          final isDisabled = _isSubmitting || _isWaitingForTeacher;
-                          final choiceColor = _getChoiceColor(choice);
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return GridView.builder(
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            childAspectRatio: constraints.maxWidth / (constraints.maxHeight * 0.95),
+                          ),
+                          itemCount: _currentQuestion.choices.length > 4 ? 4 : _currentQuestion.choices.length,
+                          itemBuilder: (context, index) {
+                            final choice = choices[index];
+                            final answerText = _currentQuestion.choices[index];
+                            final isSelected = _selectedAnswer == choice;
+                            final isDisabled = _isSubmitting || _isWaitingForTeacher;
+                            final choiceColor = _getChoiceColor(choice);
 
-                          return InkWell(
-                            onTap: isDisabled ? null : () => _selectAnswer(choice),
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: isSelected 
-                                    ? choiceColor.withOpacity(0.3)
-                                    : choiceColor,
-                                borderRadius: BorderRadius.circular(12),
-                                border: isSelected
-                                    ? Border.all(
-                                        color: Colors.white,
-                                        width: 4,
-                                      )
-                                    : null,
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    choice,
-                                    style: const TextStyle(
-                                      fontSize: 48,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                                    child: Text(
-                                      answerText,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.normal,
+                            return InkWell(
+                              onTap: isDisabled ? null : () => _selectAnswer(choice),
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: isSelected 
+                                      ? choiceColor.withOpacity(0.3)
+                                      : choiceColor,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: isSelected
+                                      ? Border.all(
+                                          color: Colors.white,
+                                          width: 4,
+                                        )
+                                      : null,
+                                ),
+                                child: Stack(
+                                  children: [
+                                    // Letter in top-left corner
+                                    Positioned(
+                                      top: 12,
+                                      left: 12,
+                                      child: Text(
+                                        choice,
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
                                       ),
-                                      textAlign: TextAlign.center,
-                                      maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ),
-                                ],
+                                    // Answer text centered
+                                    Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                                        child: Text(
+                                          answerText,
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                          maxLines: 4,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                      ),
+                            );
+                          },
+                        );
+                      },
                     ),
                   ),
                 ),
