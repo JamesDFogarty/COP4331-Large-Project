@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/user.dart';
+import 'join_quiz_screen.dart';
 
 class AnswerFeedbackScreen extends StatefulWidget {
   final bool isCorrect;
@@ -78,7 +79,14 @@ class _AnswerFeedbackScreenState extends State<AnswerFeedbackScreen>
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // Close dialog
-                Navigator.pop(context, false); // Exit test
+                // Navigate back to join quiz screen and clear all routes
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => JoinQuizScreen(user: widget.user),
+                  ),
+                  (route) => false,
+                );
               },
               child: const Text(
                 'Exit',

@@ -185,7 +185,7 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Color(0xFFFFC904)),
-            onPressed: _handleLogout, // CHANGED THIS
+            onPressed: _handleLogout,
           ),
         ],
       ),

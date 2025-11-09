@@ -5,6 +5,7 @@ import '../services/quiz_session.dart';
 import '../services/quiz_services.dart';
 import 'answer_feedback_screen.dart';
 import 'quiz_results_screen.dart';
+import 'join_quiz_screen.dart';
 
 class QuizQuestionScreen extends StatefulWidget {
   final User user;
@@ -64,7 +65,14 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // Close dialog
-                Navigator.pop(context, false); // Exit test
+                // Navigate back to join quiz screen
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => JoinQuizScreen(user: widget.user),
+                  ),
+                  (route) => false,
+                );
               },
               child: const Text(
                 'Exit',
@@ -225,6 +233,19 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
     }
   }
 
+  Widget _buildHollowSquare(double size, double borderWidth) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: const Color(0xFF272727),
+          width: borderWidth,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_currentQuestionIndex >= widget.session.questions.length) {
@@ -236,19 +257,6 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
 
     final question = widget.session.questions[_currentQuestionIndex];
     final choices = ['A', 'B', 'C', 'D'];
-
-    Widget _buildHollowSquare(double size, double borderWidth) {
-      return Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: const Color(0xFF272727),
-            width: borderWidth,
-          ),
-        ),
-      );
-    }
 
     return Scaffold(
       backgroundColor: const Color(0xFF171717),
@@ -332,151 +340,150 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
           // Main content
           SafeArea(
             child: Column(
-          children: [
-            // Question text at top
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                question.questionText,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
-            // Answer choices grid
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  children: List.generate(
-                    question.choices.length > 4 ? 4 : question.choices.length,
-                    (index) {
-                      final choice = choices[index];
-                      final answerText = question.choices[index];
-                      final isSelected = _selectedAnswer == choice;
-                      final isDisabled = _isSubmitting || _isWaitingForTeacher;
-                      final choiceColor = _getChoiceColor(choice);
-
-                      return InkWell(
-                        onTap: isDisabled ? null : () => _selectAnswer(choice),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: isSelected 
-                                ? choiceColor.withOpacity(0.3)
-                                : choiceColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: isSelected
-                                ? Border.all(
-                                    color: Colors.white,
-                                    width: 4,
-                                  )
-                                : null,
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                choice,
-                                style: TextStyle(
-                                  fontSize: 48,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: Text(
-                                  answerText,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.white,
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+              children: [
+                // Question text at top
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    question.questionText,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-              ),
-            ),
 
-            // Bottom info bar
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: Color(0xFF272727),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Student name
-                  Text(
-                    '${widget.user.firstName} ${widget.user.lastName.substring(0, 1)}.',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                // Answer choices grid
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: GridView.count(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      children: List.generate(
+                        question.choices.length > 4 ? 4 : question.choices.length,
+                        (index) {
+                          final choice = choices[index];
+                          final answerText = question.choices[index];
+                          final isSelected = _selectedAnswer == choice;
+                          final isDisabled = _isSubmitting || _isWaitingForTeacher;
+                          final choiceColor = _getChoiceColor(choice);
+
+                          return InkWell(
+                            onTap: isDisabled ? null : () => _selectAnswer(choice),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isSelected 
+                                    ? choiceColor.withOpacity(0.3)
+                                    : choiceColor,
+                                borderRadius: BorderRadius.circular(12),
+                                border: isSelected
+                                    ? Border.all(
+                                        color: Colors.white,
+                                        width: 4,
+                                      )
+                                    : null,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    choice,
+                                    style: const TextStyle(
+                                      fontSize: 48,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    child: Text(
+                                      answerText,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.normal,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
-                  
-                  // Status or score
-                  if (_isWaitingForTeacher)
-                    Row(
-                      children: const [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Color(0xFFFFC904),
-                          ),
+                ),
+
+                // Bottom info bar
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF272727),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Student name
+                      Text(
+                        '${widget.user.firstName} ${widget.user.lastName.substring(0, 1)}.',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
-                        SizedBox(width: 8),
+                      ),
+                      
+                      // Status or score
+                      if (_isWaitingForTeacher)
+                        Row(
+                          children: const [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFFFFC904),
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Waiting...',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFFFFC904),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        )
+                      else
                         Text(
-                          'Waiting...',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFFFFC904),
+                          '-/${widget.session.totalQuestions}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ],
-                    )
-                  else
-                    Text(
-                      '-/${widget.session.totalQuestions}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                ],
-              ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-      
-      ],
+          ),
+        ],
       ),
     );
   }
