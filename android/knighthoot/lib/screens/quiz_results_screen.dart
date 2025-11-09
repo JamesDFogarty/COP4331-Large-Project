@@ -21,8 +21,13 @@ class QuizResultsScreen extends StatelessWidget {
         : '0.0';
 
     return Scaffold(
+      backgroundColor: const Color(0xFF171717),
       appBar: AppBar(
-        title: const Text('Quiz Results', style: TextStyle(color: Color(0xFFFFD700))),
+        backgroundColor: const Color(0xFF272727),
+        title: const Text(
+          'Quiz Results', 
+          style: TextStyle(color: Color(0xFFFFC904)),
+        ),
         automaticallyImplyLeading: false,
       ),
       body: SafeArea(
@@ -36,16 +41,16 @@ class QuizResultsScreen extends StatelessWidget {
                     ? Icons.emoji_events
                     : Icons.star,
                 size: 100,
-                color: const Color(0xFFFFD700),
+                color: const Color(0xFFFFC904),
               ),
               const SizedBox(height: 24),
 
-              Text(
+              const Text(
                 'Quiz Complete!',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFFFFD700),
+                  color: Color(0xFFFFC904),
                 ),
               ),
               const SizedBox(height: 32),
@@ -53,9 +58,9 @@ class QuizResultsScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A1A),
+                  color: const Color(0xFF272727),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFFFD700), width: 2),
+                  border: Border.all(color: const Color(0xFFFFC904), width: 2),
                 ),
                 child: Column(
                   children: [
@@ -64,7 +69,7 @@ class QuizResultsScreen extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 48,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFFFFD700),
+                        color: Color(0xFFFFC904),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -110,6 +115,7 @@ class QuizResultsScreen extends StatelessWidget {
 
               SizedBox(
                 width: double.infinity,
+                height: 48,
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.pushAndRemoveUntil(
@@ -120,7 +126,21 @@ class QuizResultsScreen extends StatelessWidget {
                       (route) => false,
                     );
                   },
-                  child: const Text('RETURN TO HOME'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFC904),
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'RETURN TO HOME',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -132,7 +152,7 @@ class QuizResultsScreen extends StatelessWidget {
 
   String _getPerformanceMessage(double ratio) {
     if (ratio >= 0.9) return 'Outstanding! Perfect score! 🎉';
-    if (ratio >= 0.7) return 'Great job! Well done! 👏';
+    if (ratio >= 0.7) return 'Great job! Well done! 👍';
     if (ratio >= 0.5) return 'Good effort! Keep practicing! 💪';
     return 'Keep learning and try again! 📚';
   }

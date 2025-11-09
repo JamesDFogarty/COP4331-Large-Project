@@ -223,7 +223,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
                 // Description
                 Text(
-                  'We sent a 6-digit code to',
+                  'We sent a 6 digit code to',
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.white70,
@@ -254,9 +254,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                         keyboardType: TextInputType.number,
                         maxLength: 1,
                         style: const TextStyle(
-                          fontSize: 24,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Color.fromARGB(255, 255, 255, 255),
                         ),
                         decoration: InputDecoration(
                           counterText: '',

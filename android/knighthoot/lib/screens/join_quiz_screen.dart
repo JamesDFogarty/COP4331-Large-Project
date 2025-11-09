@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../models/user.dart';
 import '../services/quiz_services.dart';
 import '../services/quiz_session.dart';
-import 'waiting_room_screen.dart';
 import 'quiz_question_screen.dart';
 import 'welcome_screen.dart';
 import 'grades_screen.dart';
@@ -28,6 +27,16 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
     super.dispose();
   }
 
+  // Helper to convert user.id to int safely
+  int _getUserIdAsInt() {
+    if (widget.user.id is int) {
+      return widget.user.id as int;
+    } else if (widget.user.id is String) {
+      return int.tryParse(widget.user.id as String) ?? 0;
+    }
+    return 0;
+  }
+
   Future<void> _handleJoinQuiz() async {
     if (_pinController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -44,7 +53,7 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
     try {
       final session = await QuizService.joinQuiz(
         _pinController.text.trim(),
-        widget.user.id,
+        _getUserIdAsInt(), // Convert to int
         widget.user.token ?? '',
       );
 
@@ -75,13 +84,14 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
         return;
       }
 
-      // Navigate directly to the current question
+      // Navigate directly to the current question - PASS THE PIN!
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => QuizQuestionScreen(
             user: widget.user,
             session: session,
+            pin: _pinController.text.trim(), // CRITICAL: Pass the PIN!
           ),
         ),
       );
@@ -185,7 +195,7 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Color(0xFFFFC904)),
-            onPressed: _handleLogout, // CHANGED THIS
+            onPressed: _handleLogout,
           ),
         ],
       ),

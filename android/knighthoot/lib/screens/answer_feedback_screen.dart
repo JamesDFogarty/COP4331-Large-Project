@@ -17,113 +17,120 @@ class AnswerFeedbackScreen extends StatefulWidget {
   State<AnswerFeedbackScreen> createState() => _AnswerFeedbackScreenState();
 }
 
-class _AnswerFeedbackScreenState extends State<AnswerFeedbackScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
-
+class _AnswerFeedbackScreenState extends State<AnswerFeedbackScreen> {
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-
-    _scaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
-    );
-
-    _animationController.forward();
-
+    // Auto-advance after 3 seconds
     Timer(const Duration(seconds: 3), () {
       if (mounted) {
-        Navigator.pop(context, true);
+        Navigator.pop(context, true); // Return true to continue
       }
     });
   }
 
   @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: widget.isCorrect
-          ? Colors.green.withOpacity(0.1)
-          : Colors.red.withOpacity(0.1),
-      body: Center(
-        child: ScaleTransition(
-          scale: _scaleAnimation,
+      backgroundColor: widget.isCorrect 
+          ? const Color(0xFF1B5E20) // Dark green
+          : const Color(0xFFB71C1C), // Dark red
+      body: SafeArea(
+        child: Center(
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(32.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
                   widget.isCorrect ? Icons.check_circle : Icons.cancel,
                   size: 120,
-                  color: widget.isCorrect ? Colors.green : Colors.red,
+                  color: Colors.white,
                 ),
                 const SizedBox(height: 32),
-
+                
                 Text(
-                  widget.isCorrect ? 'CORRECT!' : 'INCORRECT',
-                  style: TextStyle(
-                    fontSize: 36,
+                  widget.isCorrect ? 'Correct!' : 'Incorrect',
+                  style: const TextStyle(
+                    fontSize: 48,
                     fontWeight: FontWeight.bold,
-                    color: widget.isCorrect ? Colors.green : Colors.red,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 24),
-
+                
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A1A),
+                    color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: widget.isCorrect ? Colors.green : Colors.red,
-                      width: 2,
-                    ),
                   ),
                   child: Column(
                     children: [
-                      if (!widget.isCorrect) ...[
-                        Text(
-                          'Your answer: ${widget.studentAnswer}',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            color: Colors.red,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'Your answer: ',
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: Colors.white70,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                      Text(
-                        'Correct answer: ${widget.correctAnswer}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: widget.isCorrect ? Colors.green : const Color(0xFFFFD700),
-                          fontWeight: FontWeight.bold,
-                        ),
+                          Text(
+                            widget.studentAnswer,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
+                      if (!widget.isCorrect) ...[
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text(
+                              'Correct answer: ',
+                              style: TextStyle(
+                                fontSize: 20,
+                                color: Colors.white70,
+                              ),
+                            ),
+                            Text(
+                              widget.correctAnswer,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
-                const SizedBox(height: 32),
-
-                const CircularProgressIndicator(
-                  color: Color(0xFFFFD700),
+                const SizedBox(height: 48),
+                
+                const Text(
+                  'Moving to next question...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white70,
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Loading next question...',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white70,
+                
+                const SizedBox(
+                  width: 30,
+                  height: 30,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: Colors.white,
                   ),
                 ),
               ],
