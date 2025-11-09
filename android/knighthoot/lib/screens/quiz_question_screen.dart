@@ -221,11 +221,11 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
   Color _getChoiceColor(String choice) {
     switch (choice) {
       case 'A':
-        return const Color(0xFFFFC904); // Yellow
+        return const Color(0xFFCC9D00); // Darker Yellow
       case 'B':
         return const Color(0xFF9E9E9E); // Gray
       case 'C':
-        return const Color(0xFFAC8C10); // Gold/Brown
+        return const Color(0xFF8B7010); // Darker Gold/Brown
       case 'D':
         return const Color(0xFF616161); // Dark Gray
       default:
