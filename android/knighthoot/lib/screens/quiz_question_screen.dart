@@ -45,6 +45,9 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
     _testID = widget.session.testID;
     _totalQuestions = widget.session.totalQuestions;
     _pin = widget.pin;
+    
+    // Start waiting for teacher immediately (handles case where teacher advances before student answers)
+    _waitForTeacherToAdvance();
   }
 
   @override
@@ -107,17 +110,18 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
   }
 
   Future<void> _selectAnswer(String answer) async {
-    if (_isSubmitting || _isWaitingForTeacher) return;
+    if (_isSubmitting) return; // Only block if submitting, not if waiting
 
     setState(() {
       _selectedAnswer = answer;
-      _isWaitingForTeacher = true;
     });
-
-    await _waitForTeacherToAdvance();
   }
 
   Future<void> _waitForTeacherToAdvance() async {
+    if (_isWaitingForTeacher) return; // Prevent duplicate calls
+    
+    setState(() => _isWaitingForTeacher = true);
+    
     try {
       // This call BLOCKS on the server until teacher advances
       final result = await QuizService.waitForNextQuestion(
@@ -129,19 +133,22 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
 
       if (result['error'] != true) {
         final correctAnswerLetter = result['correctAnswerLetter'] ?? 'A';
-        final isCorrect = _selectedAnswer == correctAnswerLetter;
+        final didAnswer = _selectedAnswer != null;
+        final isCorrect = didAnswer && (_selectedAnswer == correctAnswerLetter);
 
-        if (isCorrect) {
+        if (didAnswer && isCorrect) {
           _correctAnswers++;
         }
-        _totalAnswered++;
+        if (didAnswer) {
+          _totalAnswered++;
+        }
 
         // Submit the answer with the correct isCorrect value
         await QuizService.submitAnswer(
           testID: _testID,
           studentId: _getUserIdAsInt(),
           answer: _selectedAnswer ?? '',
-          isCorrect: isCorrect,
+          isCorrect: didAnswer ? isCorrect : false,
           token: widget.user.token ?? '',
         );
 
@@ -150,9 +157,9 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
           context,
           MaterialPageRoute(
             builder: (context) => AnswerFeedbackScreen(
-              isCorrect: isCorrect,
+              isCorrect: didAnswer ? isCorrect : false,
               correctAnswer: correctAnswerLetter,
-              studentAnswer: _selectedAnswer ?? 'No answer',
+              studentAnswer: didAnswer ? _selectedAnswer! : 'No answer (Time ran out)',
               currentScore: _correctAnswers,
               totalQuestions: _totalQuestions,
               user: widget.user,
@@ -175,7 +182,7 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
 
             if (!mounted) return;
 
-            // Check if quiz ended
+            // Check if quiz ended (isLive=false OR currentQuestion=-1)
             if (!updatedSession.isLive || updatedSession.currentQuestion == -1) {
               _navigateToResults();
               return;
@@ -190,28 +197,18 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
                 _selectedAnswer = null;
                 _isWaitingForTeacher = false;
               });
-            } else if (updatedSession.currentQuestion == _currentQuestionIndex) {
-              // Still on same question? Check if we've answered all questions
-              if (_totalAnswered >= _totalQuestions) {
-                _navigateToResults();
-              } else {
-                setState(() => _isWaitingForTeacher = false);
-              }
+              
+              // Start waiting for teacher on new question
+              _waitForTeacherToAdvance();
+            } else {
+              // Still on same question or quiz ended
+              _navigateToResults();
             }
           } catch (e) {
             print('Error rejoining quiz: $e');
-            if (_totalAnswered >= _totalQuestions) {
+            // Error rejoining likely means quiz ended - navigate to results
+            if (mounted) {
               _navigateToResults();
-            } else {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error: ${e.toString()}'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-                setState(() => _isWaitingForTeacher = false);
-              }
             }
           }
         }
@@ -230,13 +227,8 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
     } catch (e) {
       print('Error waiting for teacher: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        setState(() => _isWaitingForTeacher = false);
+        // If waitQuestion fails, quiz probably ended
+        _navigateToResults();
       }
     }
   }
@@ -249,7 +241,7 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
         builder: (context) => QuizResultsScreen(
           user: widget.user,
           correctAnswers: _correctAnswers,
-          totalQuestions: _totalAnswered,
+          totalQuestions: _totalAnswered > 0 ? _totalAnswered : _totalQuestions,
           testName: _testID,
         ),
       ),
@@ -405,7 +397,7 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
                             final choice = choices[index];
                             final answerText = _currentQuestion.choices[index];
                             final isSelected = _selectedAnswer == choice;
-                            final isDisabled = _isSubmitting || _isWaitingForTeacher;
+                            final isDisabled = _isSubmitting; // Only disable when submitting, not when waiting
                             final choiceColor = _getChoiceColor(choice);
 
                             return InkWell(
