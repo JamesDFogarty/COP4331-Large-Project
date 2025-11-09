@@ -199,7 +199,7 @@ class WelcomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-
+                
                   // Footer Note
                   const Text(
                     'No teacher account creation or login available.\nPlease go to the website for further steps.',

@@ -5,11 +5,12 @@ import '../services/quiz_session.dart';
 import '../services/quiz_services.dart';
 import 'answer_feedback_screen.dart';
 import 'quiz_results_screen.dart';
+import 'join_quiz_screen.dart';
 
 class QuizQuestionScreen extends StatefulWidget {
   final User user;
   final QuizSession session;
-  final String pin;
+  final String pin; // CRITICAL: Need PIN to rejoin!
 
   const QuizQuestionScreen({
     Key? key,
@@ -61,6 +62,50 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
     return 0;
   }
 
+  void _showExitDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF272727),
+          title: const Text(
+            'Exit Test',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: const Text(
+            'Are you sure you want to exit the test? Your progress will be lost.',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => JoinQuizScreen(user: widget.user),
+                  ),
+                  (route) => false,
+                );
+              },
+              child: const Text(
+                'Exit',
+                style: TextStyle(color: Color(0xFFFFC904)),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _selectAnswer(String answer) async {
     if (_isSubmitting || _isWaitingForTeacher) return;
 
@@ -94,13 +139,13 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
         // Submit the answer with the correct isCorrect value
         await QuizService.submitAnswer(
           testID: _testID,
-          studentId: _getUserIdAsInt(), // Convert to int
+          studentId: _getUserIdAsInt(),
           answer: _selectedAnswer ?? '',
           isCorrect: isCorrect,
           token: widget.user.token ?? '',
         );
 
-        // Show feedback screen
+        // Show feedback screen with UI updates
         final shouldContinue = await Navigator.push(
           context,
           MaterialPageRoute(
@@ -108,6 +153,11 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
               isCorrect: isCorrect,
               correctAnswer: correctAnswerLetter,
               studentAnswer: _selectedAnswer ?? 'No answer',
+              currentScore: _correctAnswers,
+              totalQuestions: _totalQuestions,
+              user: widget.user,
+              testID: _pin, // Pass PIN not testID for display
+              questionNumber: _currentQuestionIndex + 1,
             ),
           ),
         );
@@ -119,7 +169,7 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
           try {
             final updatedSession = await QuizService.joinQuiz(
               _pin,
-              _getUserIdAsInt(), // Convert to int
+              _getUserIdAsInt(),
               widget.user.token ?? '',
             );
 
@@ -141,7 +191,7 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
                 _isWaitingForTeacher = false;
               });
             } else if (updatedSession.currentQuestion == _currentQuestionIndex) {
-              // Still on same question? This might mean quiz ended
+              // Still on same question? Check if we've answered all questions
               if (_totalAnswered >= _totalQuestions) {
                 _navigateToResults();
               } else {
@@ -200,6 +250,35 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
           user: widget.user,
           correctAnswers: _correctAnswers,
           totalQuestions: _totalAnswered,
+          testName: _testID,
+        ),
+      ),
+    );
+  }
+
+  Color _getChoiceColor(String choice) {
+    switch (choice) {
+      case 'A':
+        return const Color(0xFFFFC904); // Yellow
+      case 'B':
+        return const Color(0xFF9E9E9E); // Gray
+      case 'C':
+        return const Color(0xFFAC8C10); // Gold/Brown
+      case 'D':
+        return const Color(0xFF616161); // Dark Gray
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Widget _buildHollowSquare(double size, double borderWidth) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: const Color(0xFF272727),
+          width: borderWidth,
         ),
       ),
     );
@@ -213,159 +292,228 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
       backgroundColor: const Color(0xFF171717),
       appBar: AppBar(
         backgroundColor: const Color(0xFF272727),
-        title: Text(
-          'Question ${_currentQuestionIndex + 1}/$_totalQuestions',
-          style: const TextStyle(color: Color(0xFFFFC904)),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: _showExitDialog,
         ),
-        automaticallyImplyLeading: false,
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(width: 8),
+            Text(
+              'PIN: $_pin',
+              style: const TextStyle(
+                color: Color(0xFFFFC904),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        centerTitle: true,
+        actions: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Text(
+                '${_currentQuestionIndex + 1} of $_totalQuestions',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              LinearProgressIndicator(
-                value: (_currentQuestionIndex + 1) / _totalQuestions,
-                backgroundColor: const Color(0xFF333333),
-                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFFC904)),
-                minHeight: 8,
-              ),
-              const SizedBox(height: 32),
-
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A1A),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFFFC904), width: 2),
-                ),
-                child: Text(
-                  _currentQuestion.questionText,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+      body: Stack(
+        children: [
+          // Background decorative squares
+          Positioned(
+            top: 50,
+            right: 30,
+            child: _buildHollowSquare(200, 2),
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            child: _buildHollowSquare(200, 2),
+          ),
+          Positioned(
+            bottom: 200,
+            right: 50,
+            child: _buildHollowSquare(80, 2),
+          ),
+          Positioned(
+            bottom: 100,
+            left: 20,
+            child: _buildHollowSquare(50, 2),
+          ),
+          Positioned(
+            top: 300,
+            right: 70,
+            child: _buildHollowSquare(35, 2),
+          ),
+          Positioned(
+            top: 400,
+            left: 60,
+            child: _buildHollowSquare(45, 2),
+          ),
+          Positioned(
+            bottom: 200,
+            left: 80,
+            child: _buildHollowSquare(150, 2),
+          ),
+        
+          // Main content
+          SafeArea(
+            child: Column(
+              children: [
+                // Question text at top
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    _currentQuestion.questionText,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 32),
 
-              Expanded(
-                child: ListView.builder(
-                  itemCount: _currentQuestion.choices.length,
-                  itemBuilder: (context, index) {
-                    final choice = choices[index];
-                    final answerText = _currentQuestion.choices[index];
-                    final isSelected = _selectedAnswer == choice;
-                    final isDisabled = _isSubmitting || _isWaitingForTeacher;
+                // Answer choices grid
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: GridView.count(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      children: List.generate(
+                        _currentQuestion.choices.length > 4 ? 4 : _currentQuestion.choices.length,
+                        (index) {
+                          final choice = choices[index];
+                          final answerText = _currentQuestion.choices[index];
+                          final isSelected = _selectedAnswer == choice;
+                          final isDisabled = _isSubmitting || _isWaitingForTeacher;
+                          final choiceColor = _getChoiceColor(choice);
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: InkWell(
-                        onTap: isDisabled ? null : () => _selectAnswer(choice),
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? const Color(0xFFFFC904).withOpacity(0.2)
-                                : const Color(0xFF1A1A1A),
+                          return InkWell(
+                            onTap: isDisabled ? null : () => _selectAnswer(choice),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isSelected
-                                  ? const Color(0xFFFFC904)
-                                  : const Color(0xFF333333),
-                              width: isSelected ? 3 : 1,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? const Color(0xFFFFC904)
-                                      : const Color(0xFF333333),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Center(
-                                  child: Text(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: isSelected 
+                                    ? choiceColor.withOpacity(0.3)
+                                    : choiceColor,
+                                borderRadius: BorderRadius.circular(12),
+                                border: isSelected
+                                    ? Border.all(
+                                        color: Colors.white,
+                                        width: 4,
+                                      )
+                                    : null,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
                                     choice,
-                                    style: TextStyle(
-                                      fontSize: 18,
+                                    style: const TextStyle(
+                                      fontSize: 48,
                                       fontWeight: FontWeight.bold,
-                                      color: isSelected ? Colors.black : Colors.white,
+                                      color: Colors.white,
                                     ),
                                   ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Text(
-                                  answerText,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: isSelected ? const Color(0xFFFFC904) : Colors.white,
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  const SizedBox(height: 8),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    child: Text(
+                                      answerText,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.normal,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
-                              if (isSelected)
-                                const Icon(
-                                  Icons.check_circle,
-                                  color: Color(0xFFFFC904),
-                                  size: 28,
-                                ),
-                            ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Bottom info bar
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF272727),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Student name
+                      Text(
+                        '${widget.user.firstName} ${widget.user.lastName.substring(0, 1)}.',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      
+                      // Status or score
+                      if (_isWaitingForTeacher)
+                        Row(
+                          children: const [
+                            SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFFFFC904),
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Waiting...',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFFFFC904),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        Text(
+                          '$_correctAnswers/$_totalQuestions',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A1A),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (_isWaitingForTeacher) ...[
-                      const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Color(0xFFFFC904),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
                     ],
-                    Text(
-                      _selectedAnswer == null
-                          ? 'Select your answer'
-                          : _isWaitingForTeacher
-                              ? 'Waiting for teacher to advance...'
-                              : 'Answer selected!',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: _selectedAnswer == null ? Colors.white70 : const Color(0xFFFFC904),
-                        fontWeight: _selectedAnswer == null ? FontWeight.normal : FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

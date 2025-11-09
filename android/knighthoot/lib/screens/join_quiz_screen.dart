@@ -53,7 +53,7 @@ class _JoinQuizScreenState extends State<JoinQuizScreen> {
     try {
       final session = await QuizService.joinQuiz(
         _pinController.text.trim(),
-        _getUserIdAsInt(), // Convert to int
+        _getUserIdAsInt(),
         widget.user.token ?? '',
       );
 
