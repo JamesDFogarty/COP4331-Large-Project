@@ -1,36 +1,38 @@
-// File: lib/models/test_score.dart
 class TestScore {
-  final String id;
-  final String testName;
-  final String studentFirstName;
-  final String studentLastName;
-  final int score;
+  final int studentId;
+  final String testID;
+  final String testName; // Will be same as testID since MongoDB doesn't store name
+  final int score; // correct count
+  final int incorrect;
   final int totalQuestions;
-  final DateTime dateTaken;
+  final String studentFirstName; // Will need to get from User object
+  final String studentLastName; // Will need to get from User object
+  final DateTime dateTaken; // Not in MongoDB, use current date
 
   TestScore({
-    required this.id,
+    required this.studentId,
+    required this.testID,
     required this.testName,
+    required this.score,
+    required this.incorrect,
+    required this.totalQuestions,
     required this.studentFirstName,
     required this.studentLastName,
-    required this.score,
-    required this.totalQuestions,
     required this.dateTaken,
   });
 
+  // IMPORTANT: The firstName and lastName parameters must be here for api_service.dart to work
   factory TestScore.fromJson(Map<String, dynamic> json, {String? firstName, String? lastName}) {
     return TestScore(
-      id: json['_id'] ?? json['id'] ?? '',
-      testName: json['testName'] ?? 'Unknown Test',
-      studentFirstName: json['studentFirstName'] ?? '',
-      studentLastName: json['studentLastName'] ?? '',
-      score: json['score'] ?? 0,
+      studentId: json['SID'] ?? 0,
+      testID: json['testID'] ?? 'unknown',
+      testName: json['testID'] ?? 'Unknown Test', // Use testID as testName since MongoDB doesn't store name
+      score: json['correct'] ?? 0, // MongoDB stores 'correct' not 'score'
+      incorrect: json['incorrect'] ?? 0,
       totalQuestions: json['totalQuestions'] ?? 0,
-      dateTaken: json['dateTaken'] != null
-          ? DateTime.parse(json['dateTaken'])
-          : DateTime.now(),
+      studentFirstName: firstName ?? 'Unknown', // Use the parameter passed in
+      studentLastName: lastName ?? 'Student', // Use the parameter passed in
+      dateTaken: DateTime.now(), // MongoDB doesn't store date
     );
   }
-
-  double get percentage => totalQuestions > 0 ? (score / totalQuestions * 100) : 0.0;
 }

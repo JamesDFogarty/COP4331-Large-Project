@@ -191,18 +191,24 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
+
         
         // Extract firstName and lastName from the User object
         String userFirstName = user.firstName;
         String userLastName = user.lastName;
         
-        return data.map((json) {
-          return TestScore.fromJson(
+        final scores = data.map((json) {
+
+          
+          final testScore = TestScore.fromJson(
             json,
             firstName: userFirstName,
             lastName: userLastName,
           );
+          return testScore;
         }).toList();
+        
+        return scores;
       } else {
         final error = jsonDecode(response.body);
         throw Exception(error['error'] ?? 'Failed to fetch scores');
