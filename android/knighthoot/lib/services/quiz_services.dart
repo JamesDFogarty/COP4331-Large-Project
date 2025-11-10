@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'quiz_session.dart';
 
 class QuizService {
-  static const String baseUrl = 'http://174.138.73.101:5173/api'; // Replace with your actual API URL
+  static const String baseUrl = 'https://knighthoot.app/api'; // Replace with your actual API URL
 
   // Join a quiz using PIN
   static Future<QuizSession> joinQuiz(String pin, int studentId, String token) async {

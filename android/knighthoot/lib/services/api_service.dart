@@ -5,7 +5,7 @@ import '../models/user.dart';
 import '../models/test_score.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://174.138.73.101:5173/api';
+  static const String baseUrl = 'https://knighthoot.app/api';
 
   static Future<User> login(String username, String password) async {
     try {
