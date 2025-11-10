@@ -4,12 +4,34 @@ import 'package:http/http.dart' as http;
 import '../models/user.dart';
 import '../models/test_score.dart';
 
+// Platform-specific imports
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show HttpClient, X509Certificate;
+import 'package:http/io_client.dart';
+
 class ApiService {
   static const String baseUrl = 'https://knighthoot.app/api';
 
+  // ⚠️ WARNING: This bypasses SSL certificate verification on mobile/desktop
+  // ONLY use for development with self-signed certificates
+  // REMOVE this before deploying to production!
+  static http.Client _getHttpClient() {
+    if (kIsWeb) {
+      // Web doesn't support custom HttpClient, use default
+      // Note: Web browsers handle SSL differently and may still show warnings
+      return http.Client();
+    } else {
+      // Mobile/Desktop: bypass certificate verification
+      final httpClient = HttpClient()
+        ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+      return IOClient(httpClient);
+    }
+  }
+
   static Future<User> login(String username, String password) async {
+    final client = _getHttpClient();
     try {
-      final response = await http.post(
+      final response = await client.post(
         Uri.parse('$baseUrl/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -27,6 +49,8 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Connection error: $e');
+    } finally {
+      client.close();
     }
   }
 
@@ -38,8 +62,9 @@ class ApiService {
     required String email,
     required bool isTeacher,
   }) async {
+    final client = _getHttpClient();
     try {
-      final response = await http.post(
+      final response = await client.post(
         Uri.parse('$baseUrl/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -60,12 +85,15 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Connection error: $e');
+    } finally {
+      client.close();
     }
   }
 
   static Future<bool> checkEmailExists(String email) async {
+    final client = _getHttpClient();
     try {
-      final response = await http.post(
+      final response = await client.post(
         Uri.parse('$baseUrl/emailExists'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -82,12 +110,15 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Connection error: $e');
+    } finally {
+      client.close();
     }
   }
 
   static Future<Map<String, dynamic>> sendOtpEmail(String email) async {
+    final client = _getHttpClient();
     try {
-      final response = await http.post(
+      final response = await client.post(
         Uri.parse('$baseUrl/email'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -103,13 +134,15 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Connection error: $e');
+    } finally {
+      client.close();
     }
   }
 
-  // FIXED: Proper error handling
   static Future<void> sendForgotPasswordEmail(String email) async {
+    final client = _getHttpClient();
     try {
-      final response = await http.post(
+      final response = await client.post(
         Uri.parse('$baseUrl/forgot-password'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -126,6 +159,8 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Connection error: $e');
+    } finally {
+      client.close();
     }
   }
 
@@ -134,8 +169,9 @@ class ApiService {
     required String otp,
     required String newPassword,
   }) async {
+    final client = _getHttpClient();
     try {
-      final response = await http.post(
+      final response = await client.post(
         Uri.parse('$baseUrl/reset-password'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -153,12 +189,15 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Connection error: $e');
+    } finally {
+      client.close();
     }
   }
 
   static Future<Map<String, dynamic>> startTest(String testCode) async {
+    final client = _getHttpClient();
     try {
-      final response = await http.post(
+      final response = await client.post(
         Uri.parse('$baseUrl/test/start'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -174,14 +213,16 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Connection error: $e');
+    } finally {
+      client.close();
     }
   }
 
-  // FIXED: Get all scores for a student with proper User object passed
   static Future<List<TestScore>> getStudentScores(
       User user, String token) async {
+    final client = _getHttpClient();
     try {
-      final response = await http.get(
+      final response = await client.get(
         Uri.parse('$baseUrl/score/student/${user.id}'),
         headers: {
           'Content-Type': 'application/json',
@@ -209,6 +250,8 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Connection error: $e');
+    } finally {
+      client.close();
     }
   }
 }
