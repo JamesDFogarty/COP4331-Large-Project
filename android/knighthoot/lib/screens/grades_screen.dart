@@ -5,7 +5,7 @@ import '../models/test_score.dart';
 import '../services/api_service.dart';
 import 'join_quiz_screen.dart';
 
-enum SortBy { name, score, date }
+enum SortBy { name, score }
 
 class GradesScreen extends StatefulWidget {
   final User user;
@@ -21,7 +21,7 @@ class _GradesScreenState extends State<GradesScreen> {
   List<TestScore> _filteredScores = [];
   bool _isLoading = true;
   String _searchQuery = '';
-  SortBy _currentSort = SortBy.date;
+  SortBy _currentSort = SortBy.name;
   bool _isAscending = false;
   bool _isSearching = false;
   final TextEditingController _searchController = TextEditingController();
@@ -107,7 +107,6 @@ class _GradesScreenState extends State<GradesScreen> {
             children: [
               _buildSortOption('Name', SortBy.name),
               _buildSortOption('Score', SortBy.score),
-              _buildSortOption('Date', SortBy.date),
             ],
           ),
         );
@@ -161,11 +160,6 @@ class _GradesScreenState extends State<GradesScreen> {
               ? aPercent.compareTo(bPercent)
               : bPercent.compareTo(aPercent);
         });
-        break;
-      case SortBy.date:
-        _filteredScores.sort((a, b) => _isAscending
-            ? a.dateTaken.compareTo(b.dateTaken)
-            : b.dateTaken.compareTo(a.dateTaken));
         break;
     }
   }
@@ -393,16 +387,6 @@ class _GradesScreenState extends State<GradesScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4),
-
-                // Date
-                Text(
-                  'Taken ${_formatDate(score.dateTaken)}',
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 12,
-                  ),
-                ),
               ],
             ),
           ),
@@ -447,14 +431,6 @@ class _GradesScreenState extends State<GradesScreen> {
     if (percentage >= 70) return const Color(0xFFFFC904);
     if (percentage >= 50) return Colors.orange;
     return Colors.red;
-  }
-
-  String _formatDate(DateTime date) {
-    final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    return '${date.month}/${date.day}/${date.year}';
   }
 
   Widget _buildHollowSquare(double size, double borderWidth) {

@@ -9,7 +9,6 @@ class TestScore {
   final int totalQuestions;
   final String studentFirstName; // Will need to get from User object
   final String studentLastName; // Will need to get from User object
-  final DateTime dateTaken; // Not in MongoDB, use current date
 
   TestScore({
     required this.studentId,
@@ -20,7 +19,6 @@ class TestScore {
     required this.totalQuestions,
     required this.studentFirstName,
     required this.studentLastName,
-    required this.dateTaken,
   });
 
   // IMPORTANT: The firstName and lastName parameters must be here for api_service.dart to work
@@ -28,13 +26,12 @@ class TestScore {
     return TestScore(
       studentId: json['SID'] ?? 0,
       testID: json['testID'] ?? 'unknown',
-      testName: json['testID'] ?? 'Unknown Test', // Use testID as testName
-      score: json['correct'] ?? 0,
+      testName: json['testID'] ?? 'Unknown Test', // Use testID as testName since MongoDB doesn't store name
+      score: json['correct'] ?? 0, // MongoDB stores 'correct' not 'score'
       incorrect: json['incorrect'] ?? 0,
       totalQuestions: json['totalQuestions'] ?? 0,
-      studentFirstName: firstName ?? 'Unknown',
-      studentLastName: lastName ?? 'Student',
-      dateTaken: DateTime.now(), // MongoDB doesn't store date, use current
+      studentFirstName: firstName ?? 'Unknown', // Use the parameter passed in
+      studentLastName: lastName ?? 'Student', // Use the parameter passed in
     );
   }
 }
