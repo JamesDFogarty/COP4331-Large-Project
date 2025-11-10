@@ -384,25 +384,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                // Development Mode Notice (remove in production)
-                if (_sentOtp != null)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2A2A2A),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: const Color(0xFF444444),
-                      ),
-                    ),
-                    child: Text(
-                      'Development Mode: Your code is $_sentOtp',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.white54,
-                      ),
-                    ),
-                  ),
+
+                
               ],
             ),
           ),
