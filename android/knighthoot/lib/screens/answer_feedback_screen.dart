@@ -121,11 +121,12 @@ class _AnswerFeedbackScreenState extends State<AnswerFeedbackScreen>
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        // Prevent back button, must use exit dialog
-        _showExitDialog();
-        return false;
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (bool didPop) {
+        if (!didPop) {
+          _showExitDialog();
+        }
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF171717),

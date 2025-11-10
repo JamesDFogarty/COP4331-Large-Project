@@ -177,11 +177,12 @@ class ApiService {
     }
   }
 
-    static Future<List<TestScore>> getStudentScores(
-      String studentId, String token) async {
+  // FIXED: Get all scores for a student with proper User object passed
+  static Future<List<TestScore>> getStudentScores(
+      User user, String token) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/score/student/$studentId'),
+        Uri.parse('$baseUrl/score/student/${user.id}'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -190,7 +191,18 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        return data.map((json) => TestScore.fromJson(json)).toList();
+        
+        // Extract firstName and lastName from the User object
+        String userFirstName = user.firstName;
+        String userLastName = user.lastName;
+        
+        return data.map((json) {
+          return TestScore.fromJson(
+            json,
+            firstName: userFirstName,
+            lastName: userLastName,
+          );
+        }).toList();
       } else {
         final error = jsonDecode(response.body);
         throw Exception(error['error'] ?? 'Failed to fetch scores');

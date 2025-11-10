@@ -29,7 +29,8 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
   bool _isSubmitting = false;
   bool _isWaitingForTeacher = false;
   int _correctAnswers = 0;
-  int _totalAnswered = 0;
+  // FIXED: Track questions attempted (answered + timed out) separately from total questions in test
+  int _questionsAttempted = 0;
   
   // Store current question data
   late QuizQuestion _currentQuestion;
@@ -136,14 +137,14 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
         final didAnswer = _selectedAnswer != null;
         final isCorrect = didAnswer && (_selectedAnswer == correctAnswerLetter);
 
+        // FIXED: Increment questionsAttempted regardless of whether they answered
+        _questionsAttempted++;
+
         if (didAnswer && isCorrect) {
           _correctAnswers++;
         }
-        if (didAnswer) {
-          _totalAnswered++;
-        }
 
-        // Submit the answer with the correct isCorrect value
+        // Submit the answer - if they didn't answer, submit as incorrect
         await QuizService.submitAnswer(
           testID: _testID,
           studentId: _getUserIdAsInt(),
@@ -161,7 +162,8 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
               correctAnswer: correctAnswerLetter,
               studentAnswer: didAnswer ? _selectedAnswer! : 'No answer (Time ran out)',
               currentScore: _correctAnswers,
-              totalQuestions: _totalQuestions,
+              // FIXED: Pass questionsAttempted instead of totalQuestions
+              totalQuestions: _questionsAttempted,
               user: widget.user,
               testID: _pin, // Pass PIN not testID for display
               questionNumber: _currentQuestionIndex + 1,
@@ -225,29 +227,41 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
         }
       }
     } catch (e) {
-      print('Error waiting for teacher: $e');
+      print('Wait for next question error: $e');
       if (mounted) {
-        // If waitQuestion fails, quiz probably ended
-        _navigateToResults();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Connection error. Returning to home.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => JoinQuizScreen(user: widget.user),
+          ),
+          (route) => false,
+        );
       }
     }
   }
 
   void _navigateToResults() {
-    if (!mounted) return;
+    // FIXED: Pass questionsAttempted instead of totalQuestions
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (context) => QuizResultsScreen(
           user: widget.user,
           correctAnswers: _correctAnswers,
-          totalQuestions: _totalAnswered > 0 ? _totalAnswered : _totalQuestions,
+          totalQuestions: _questionsAttempted,
           testName: _testID,
         ),
       ),
     );
   }
 
+  // Color mapping for answer choices
   Color _getChoiceColor(String choice) {
     switch (choice) {
       case 'A':
@@ -263,64 +277,53 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
     }
   }
 
-  Widget _buildHollowSquare(double size, double borderWidth) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: const Color(0xFF272727),
-          width: borderWidth,
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final choices = ['A', 'B', 'C', 'D'];
+    const choices = ['A', 'B', 'C', 'D'];
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF171717),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF272727),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: _showExitDialog,
-        ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(width: 8),
-            Text(
-              'PIN: $_pin',
-              style: const TextStyle(
-                color: Color(0xFFFFC904),
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (bool didPop) {
+        if (!didPop) {
+          _showExitDialog();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF171717),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF272727),
+          elevation: 0,
+          centerTitle: true,
+          automaticallyImplyLeading: false,
+          leading: IconButton(
+            icon: const Icon(Icons.close, color: Colors.white),
+            onPressed: _showExitDialog,
+          ),
+          title: Text(
+            'PIN: $_pin',
+            style: const TextStyle(
+              color: Color(0xFFFFC904),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          actions: [
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Text(
+                  '${_currentQuestionIndex + 1} of $_totalQuestions',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ],
         ),
-        centerTitle: true,
-        actions: [
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Text(
-                '${_currentQuestionIndex + 1} of $_totalQuestions',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-      body: Stack(
+        body: Stack(
         children: [
           // Background decorative squares
           Positioned(
@@ -479,7 +482,7 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
                         ),
                       ),
                       
-                      // Status or score
+                      // Status or score - FIXED: Display questionsAttempted
                       if (_isWaitingForTeacher)
                         Row(
                           children: const [
@@ -504,7 +507,7 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
                         )
                       else
                         Text(
-                          '$_correctAnswers/$_totalQuestions',
+                          '$_correctAnswers/$_questionsAttempted',
                           style: const TextStyle(
                             fontSize: 16,
                             color: Colors.white,
@@ -518,6 +521,20 @@ class _QuizQuestionScreenState extends State<QuizQuestionScreen> {
             ),
           ),
         ],
+      ),
+    ),
+    );
+  }
+
+  Widget _buildHollowSquare(double size, double borderWidth) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: const Color(0xFF272727),
+          width: borderWidth,
+        ),
       ),
     );
   }

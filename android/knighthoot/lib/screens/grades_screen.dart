@@ -42,8 +42,9 @@ class _GradesScreenState extends State<GradesScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // FIXED: Pass the entire User object instead of just the ID
       final scores = await ApiService.getStudentScores(
-        widget.user.id,
+        widget.user,
         widget.user.token ?? '',
       );
 

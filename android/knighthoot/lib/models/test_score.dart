@@ -18,7 +18,7 @@ class TestScore {
     required this.dateTaken,
   });
 
-  factory TestScore.fromJson(Map<String, dynamic> json) {
+  factory TestScore.fromJson(Map<String, dynamic> json, {String? firstName, String? lastName}) {
     return TestScore(
       id: json['_id'] ?? json['id'] ?? '',
       testName: json['testName'] ?? 'Unknown Test',
