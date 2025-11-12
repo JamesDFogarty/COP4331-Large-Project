@@ -135,12 +135,14 @@ class QuizService {
 
   // Helper function to convert answer index to letter
   static String _convertIndexToLetter(int index) {
-    const letters = ['A', 'B', 'C', 'D'];
-    if (index >= 0 && index < letters.length) {
-      return letters[index];
-    }
-    return 'A';
+  const letters = ['A', 'B', 'C', 'D'];
+  // Subtract 1 because API uses 1-based indexing
+  final adjustedIndex = index - 1;  // ✅ Now 1→A, 2→B, etc.
+  if (adjustedIndex >= 0 && adjustedIndex < letters.length) {
+    return letters[adjustedIndex];
   }
+  return 'A';
+}
 
   // Helper function to convert letter to index
   static int _convertLetterToIndex(String letter) {
