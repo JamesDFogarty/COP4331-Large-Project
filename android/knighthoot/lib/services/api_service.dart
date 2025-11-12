@@ -10,7 +10,7 @@ import 'dart:io' show HttpClient, X509Certificate;
 import 'package:http/io_client.dart';
 
 class ApiService {
-  static const String baseUrl = 'https://174.138.73.101:5173/api';
+  static const String baseUrl = 'https://knighthoot.app/api';
 
   // ⚠️ WARNING: This bypasses SSL certificate verification on mobile/desktop
   // ONLY use for development with self-signed certificates
